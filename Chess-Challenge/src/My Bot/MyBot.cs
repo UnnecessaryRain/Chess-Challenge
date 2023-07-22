@@ -6,14 +6,26 @@ using System.Collections.Generic;
 public class MyBot : IChessBot
 {
     private Random rand;
+    private int moveCount;
 
     public MyBot()
     {
         rand = new Random();
+        moveCount = -1;
     }
 
     public Move Think(Board board, Timer timer)
-    {
+    {   
+
+        moveCount += 1;
+
+        // always play a sensible opener if white
+        // probably a waste of tokens
+        if (board.IsWhiteToMove && moveCount == 0) {
+            Move opener = new Move("e2e4", board);
+            return opener;
+        }
+
         Move[] moves = board.GetLegalMoves();
         IEnumerable<Move> query = moves.OrderBy(a => rand.Next());
 
@@ -48,11 +60,12 @@ public class MyBot : IChessBot
             {
                 if (piece.IsWhite)
                 {
-                    whiteScore += pieceValue(piece);
+                    whiteScore += pieceValue(piece) + rankSquare(piece.Square);
                 }
                 else
                 {
-                    blackScore += pieceValue(piece);
+                    
+                    blackScore += pieceValue(piece) + rankSquare(piece.Square);
                 }
             }
         }
@@ -60,6 +73,14 @@ public class MyBot : IChessBot
         board.UndoMove(move);
 
         return whiteScore - blackScore;
+    }
+
+    // for now just uniformly rank the squares no matter what piece
+    public int rankSquare(Square s) {
+        var middle = 64 / 2;
+        var dist = Math.Abs(s.Index - middle);
+
+        return 64 - dist;
     }
 
     public int pieceValue(Piece p)
