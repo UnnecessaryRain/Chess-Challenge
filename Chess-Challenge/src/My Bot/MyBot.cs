@@ -48,18 +48,25 @@ public class MyBot : IChessBot
             {
                 if (piece.IsWhite)
                 {
-                    whiteScore += pieceValue(piece) + rankSquare(piece.Square);
+                    whiteScore += 100 * pieceValue(piece) + rankSquare(piece.Square);
                 }
                 else
                 {
-                    blackScore += pieceValue(piece) + rankSquare(piece.Square);
+                    blackScore += 100 * pieceValue(piece) + rankSquare(piece.Square);
                 }
             }
         }
 
         board.UndoMove(move);
 
-        return whiteScore - blackScore;
+        if (board.IsWhiteToMove)
+        {
+            return whiteScore - blackScore;
+        }
+        else
+        {
+            return blackScore - whiteScore;
+        }
     }
 
     // for now just uniformly rank the squares no matter what piece
@@ -67,7 +74,6 @@ public class MyBot : IChessBot
     {
         var middle = 64 / 2;
         var dist = Math.Abs(s.Index - middle);
-        System.Console.WriteLine($"dist {dist}");
         return 64 - dist;
     }
 
