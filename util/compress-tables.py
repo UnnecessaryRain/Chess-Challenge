@@ -12,7 +12,7 @@ pawns = [
 ]
 
 COMPRESS_BITS = 4
-COMPRESS_MAX = (2 ^ COMPRESS_BITS) - 1
+COMPRESS_MAX = (2 ** COMPRESS_BITS) - 1
 INT_BITS = 64
 
 def num_to_range(num, inMin, inMax, outMin, outMax):
