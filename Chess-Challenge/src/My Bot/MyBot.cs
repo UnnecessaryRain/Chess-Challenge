@@ -5,39 +5,27 @@ using System.Collections.Generic;
 
 public class MyBot : IChessBot
 {
-    private Random rand;
-    private int moveCount;
-
-    public MyBot()
-    {
-        rand = new Random();
-        moveCount = -1;
-    }
+    // Piece values: null, pawn, knight, bishop, rook, queen, king
+    int[] pieceValues = { 0, 1, 3, 3, 5, 9, 10 };
 
     public Move Think(Board board, Timer timer)
-    {   
-
-        moveCount += 1;
-
-        // always play a sensible opener if white
-        // probably a waste of tokens
-        if (board.IsWhiteToMove && moveCount == 0) {
-            Move opener = new Move("e2e4", board);
-            return opener;
-        }
-
+    {
         Move[] moves = board.GetLegalMoves();
-        IEnumerable<Move> query = moves.OrderBy(a => rand.Next());
 
         Move? bestMove = null;
         var bestScore = 0;
-        foreach (var move in query)
+        foreach (var move in moves)
         {
+            if (MoveIsCheckmate(board, move))
+            {
+                return move;
+            }
+
             var score = scoreMove(board, move);
             if (score > bestScore)
             {
                 bestMove = move;
-                bestScore= score;
+                bestScore = score;
             }
         }
 
@@ -64,7 +52,6 @@ public class MyBot : IChessBot
                 }
                 else
                 {
-                    
                     blackScore += pieceValue(piece) + rankSquare(piece.Square);
                 }
             }
@@ -76,46 +63,24 @@ public class MyBot : IChessBot
     }
 
     // for now just uniformly rank the squares no matter what piece
-    public int rankSquare(Square s) {
+    public int rankSquare(Square s)
+    {
         var middle = 64 / 2;
         var dist = Math.Abs(s.Index - middle);
-
+        System.Console.WriteLine($"dist {dist}");
         return 64 - dist;
     }
 
     public int pieceValue(Piece p)
     {
-        switch (p.PieceType)
-        {
-            case PieceType.Pawn:
-                return 1;
-            case PieceType.Bishop:
-                return 3;
-            case PieceType.Knight:
-                return 3;
-            case PieceType.Rook:
-                return 5;
-            case PieceType.Queen:
-                return 9;
-            case PieceType.King:
-                return 1;
-            default:
-                return 0;
-        }
+        return pieceValues[(int)p.PieceType];
     }
 
-    public override bool Equals(object? obj)
+    bool MoveIsCheckmate(Board board, Move move)
     {
-        return base.Equals(obj);
-    }
-
-    public override int GetHashCode()
-    {
-        return base.GetHashCode();
-    }
-
-    public override string? ToString()
-    {
-        return base.ToString();
+        board.MakeMove(move);
+        bool isMate = board.IsInCheckmate();
+        board.UndoMove(move);
+        return isMate;
     }
 }
