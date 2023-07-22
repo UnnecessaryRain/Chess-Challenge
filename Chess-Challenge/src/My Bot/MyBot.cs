@@ -13,6 +13,7 @@ public class MyBot : IChessBot
     // we only need 2 ^ 7 for all values in this table. we can compress the array into a 8 64bit ints
     // less if we use less resolution. e.g. 4 bits for 0 - 16 instead of -50 to 50
     // this would mean 4 uint64 to store a pieces table, rather than 64 ints
+    // see: https://github.com/UnnecessaryRain/Chess-Challenge/blob/util/compress-tables.py
     int[,] bonuses = {
         {
             // king end game
