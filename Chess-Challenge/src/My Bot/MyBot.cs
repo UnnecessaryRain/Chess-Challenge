@@ -9,7 +9,7 @@ public class MyBot : IChessBot
     int[] pieceValues = { 0, 1, 3, 3, 5, 9, 10 };
     bool endgame = false;
 
-    ulong[] bonuses4BitEncoded = new ulong[]{
+    ulong[] bonuses4BitEncoded = {
         // end game king
         3495870780490875728, 3712011551724954929, 3690818012361479699, 232002722662791173, 
         // pawn
@@ -57,11 +57,6 @@ public class MyBot : IChessBot
         var bestScore = int.MinValue;
         foreach (var move in moves)
         {
-            if (MoveIsCheckmate(board, move))
-            {
-                return move;
-            }
-
             var score = scoreMove(board, move);
             if (score > bestScore)
             {
@@ -79,53 +74,37 @@ public class MyBot : IChessBot
     {
         board.MakeMove(move);
 
+        if (board.IsInCheckmate()) {
+            board.UndoMove(move);
+            return int.MaxValue;
+        }
+
         var pieceLists = board.GetAllPieceLists();
-
-        var blackScore = 0;
-        var whiteScore = 0;
-
-        var blackPieces = 0;
-        var whitePieces = 0;
+        int[] scores = {0, 0};
+        int[] pieceCounts = {0, 0};
 
         foreach (var pieceList in pieceLists)
         {
             foreach (var piece in pieceList)
             {
-                if (piece.IsWhite)
+                var colorIndex = piece.IsWhite ? 0 : 1;
+                scores[colorIndex] += 100 * pieceValues[(int)piece.PieceType] + 3 * rankPosition(piece);
+                if (!piece.IsKing && !piece.IsPawn)
                 {
-                    whiteScore += 100 * pieceValue(piece) + 3 * rankPosition(piece);
-
-                    if (!piece.IsKing && !piece.IsPawn)
-                    {
-                        whitePieces += 1;
-                    }
-                }
-                else
-                {
-                    blackScore += 100 * pieceValue(piece) + 3 * rankPosition(piece);
-                    if (!piece.IsKing && !piece.IsPawn)
-                    {
-                        blackPieces += 1;
-                    }
+                    pieceCounts[colorIndex]++;
                 }
             }
         }
 
         board.UndoMove(move);
 
-        if (whitePieces <= 3 || blackPieces <= 3)
+        if (pieceCounts[0] <= 3 || pieceCounts[1] <= 3)
         {
             endgame = true;
         }
 
-        if (board.IsWhiteToMove)
-        {
-            return whiteScore - blackScore;
-        }
-        else
-        {
-            return blackScore - whiteScore;
-        }
+        var moveIndex = board.IsWhiteToMove ? 0 : 1;    
+        return scores[moveIndex] - scores[1 - moveIndex];
     }
 
     int rankPosition(Piece p)
@@ -135,18 +114,5 @@ public class MyBot : IChessBot
             return bonuses[0][p.Square.Index];
         }
         return bonuses[(int)p.PieceType][p.Square.Index];
-    }
-
-    int pieceValue(Piece p)
-    {
-        return pieceValues[(int)p.PieceType];
-    }
-
-    bool MoveIsCheckmate(Board board, Move move)
-    {
-        board.MakeMove(move);
-        bool isMate = board.IsInCheckmate();
-        board.UndoMove(move);
-        return isMate;
     }
 }
