@@ -9,91 +9,45 @@ public class MyBot : IChessBot
     int[] pieceValues = { 0, 1, 3, 3, 5, 9, 10 };
     bool endgame = false;
 
-    // todo: encode into bit array of either 8 or 4 bit values
-    // we only need 2 ^ 7 for all values in this table. we can compress the array into a 8 64bit ints
-    // less if we use less resolution. e.g. 4 bits for 0 - 16 instead of -50 to 50
-    // this would mean 4 uint64 to store a pieces table, rather than 64 ints
-    // see: https://github.com/UnnecessaryRain/Chess-Challenge/blob/main/util/compress-tables.py
-    int[,] bonuses = {
-        {
-            // king end game
-            -50,-40,-30,-20,-20,-30,-40,-50,
-            -30,-20,-10,  0,  0,-10,-20,-30,
-            -30,-10, 20, 30, 30, 20,-10,-30,
-            -30,-10, 30, 40, 40, 30,-10,-30,
-            -30,-10, 30, 40, 40, 30,-10,-30,
-            -30,-10, 20, 30, 30, 20,-10,-30,
-            -30,-30,  0,  0,  0,  0,-30,-30,
-            -50,-30,-30,-30,-30,-30,-30,-50
-        },
+    ulong[][] bonuses4BitEncoded = new ulong[][]{
+        // end game king
+        new ulong[]{3495870780490875728, 3712011551724954929, 3690818012361479699, 232002722662791173},
         // pawn
-        {
-            0,  0,  0,  0,  0,  0,  0,  0,
-            50, 50, 50, 50, 50, 50, 50, 50,
-            10, 10, 20, 30, 30, 20, 10, 10,
-            5,  5, 10, 25, 25, 10,  5,  5,
-            0,  0,  0, 20, 20,  0,  0,  0,
-            5, -5,-10,  0,  0,-10, -5,  5,
-            5, 10, 10,-20,-20, 10, 10,  5,
-            0,  0,  0,  0,  0,  0,  0,  0
-        },
+        new ulong[]{4901400205211402052, 4928665618871680836, 4928682111292473156, 4922527062430515012},
         // knight
-        {
-            -50,-40,-30,-30,-30,-30,-40,-50,
-            -40,-20,  0,  0,  0,  0,-20,-40,
-            -30,  0, 10, 15, 15, 10,  0,-30,
-            -30,  5, 15, 20, 20, 15,  5,-30,
-            -30,  0, 15, 20, 20, 15,  0,-30,
-            -30,  5, 10, 15, 15, 10,  5,-30,
-            -40,-20,  0,  5,  5,  0,-20,-40,
-            -50,-40,-30,-30,-30,-30,-40,-50,
-        },
-        {
-            // bishop
-            -20,-10,-10,-10,-10,-10,-10,-20,
-            -10,  0,  0,  0,  0,  0,  0,-10,
-            -10,  0,  5, 10, 10,  5,  0,-10,
-            -10,  5,  5, 10, 10,  5,  5,-10,
-            -10,  0, 10, 10, 10, 10,  0,-10,
-            -10, 10, 10, 10, 10, 10, 10,-10,
-            -10,  5,  0,  0,  0,  0,  5,-10,
-            -20,-10,-10,-10,-10,-10,-10,-20,
-        },
+        new ulong[]{4662022712826569280, 4802750193488012866, 2624117187294292516, 300418803178482180},
+        // bishop
+        new ulong[]{5811321330933802320, 6173590641860848213, 6182034569037654613, 385725581320215045},
         // rook
-        {
-            0,  0,  0,  0,  0,  0,  0,  0,
-            5, 10, 10, 10, 10, 10, 10,  5,
-            -5,  0,  0,  0,  0,  0,  0, -5,
-            -5,  0,  0,  0,  0,  0,  0, -5,
-            -5,  0,  0,  0,  0,  0,  0, -5,
-            -5,  0,  0,  0,  0,  0,  0, -5,
-            -5,  0,  0,  0,  0,  0,  0, -5,
-            0,  0,  0,  5,  5,  0,  0,  0
-        },
+        new ulong[]{11912109320270051925, 6148914691236560725, 6148914691236560725, 6486596357414301525},
         // queen
-        {
-            -20,-10,-10, -5, -5,-10,-10,-20,
-            -10,  0,  0,  0,  0,  0,  0,-10,
-            -10,  0,  5,  5,  5,  5,  0,-10,
-            -5,  0,  5,  5,  5,  5,  0, -5,
-            0,  0,  5,  5,  5,  5,  0, -5,
-            -10,  5,  5,  5,  5,  5,  0,-10,
-            -10,  0,  5,  0,  0,  0,  0,-10,
-            -20,-10,-10, -5, -5,-10,-10,-20
-        },
-        // king
-        {
-            -30,-40,-40,-50,-50,-40,-40,-30,
-            -30,-40,-40,-50,-50,-40,-40,-30,
-            -30,-40,-40,-50,-50,-40,-40,-30,
-            -30,-40,-40,-50,-50,-40,-40,-30,
-            -20,-30,-30,-40,-40,-30,-30,-20,
-            -10,-20,-20,-20,-20,-20,-20,-10,
-            20, 20,  0,  0,  0,  0, 20, 20,
-            20, 30, 10,  0,  0, 10, 30, 20
-        },
-
+        new ulong[]{10432297153236223632, 7407576949158890598, 7408368403499437158, 679040375191464969},
+        // mid game king
+        new ulong[]{11357329583054717699, 13807285710405832977, 18147629851284148497, 15697706967737839664}
     };
+    int[][] bonuses = new int[7][];
+
+    int[] decode(int row)
+    {
+        int[] decoded = new int[64];
+        for (int index = 0; index < 64; index += 4)
+        {
+            for (int offset = 0; offset < 4; offset++)
+            {
+                decoded[index + offset] = (int)((bonuses4BitEncoded[row][offset] & (0xFUL << index)) >> index);
+            }
+        }
+
+        return decoded;
+    }
+
+    public MyBot()
+    {
+        for (int i = 0; i < 7; i++)
+        {
+            bonuses[i] = decode(i);
+        }
+    }
 
     public Move Think(Board board, Timer timer)
     {
@@ -139,7 +93,7 @@ public class MyBot : IChessBot
             {
                 if (piece.IsWhite)
                 {
-                    whiteScore += 100 * pieceValue(piece) + rankPosition(piece);
+                    whiteScore += 100 * pieceValue(piece) + 3 * rankPosition(piece);
 
                     if (!piece.IsKing && !piece.IsPawn)
                     {
@@ -148,7 +102,7 @@ public class MyBot : IChessBot
                 }
                 else
                 {
-                    blackScore += 100 * pieceValue(piece) + rankPosition(piece);
+                    blackScore += 100 * pieceValue(piece) + 3 * rankPosition(piece);
                     if (!piece.IsKing && !piece.IsPawn)
                     {
                         blackPieces += 1;
@@ -178,9 +132,9 @@ public class MyBot : IChessBot
     {
         if (p.IsKing && endgame)
         {
-            return bonuses[0, p.Square.Index];
+            return bonuses[0][p.Square.Index];
         }
-        return bonuses[(int)p.PieceType, p.Square.Index];
+        return bonuses[(int)p.PieceType][p.Square.Index];
     }
 
     int pieceValue(Piece p)
