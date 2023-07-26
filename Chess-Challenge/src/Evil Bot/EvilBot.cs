@@ -7,6 +7,7 @@ namespace ChessChallenge.Example
     {
         // Bot registry
         Func<IChessBot>[] bots = {
+            () => new v2_0_1NoCap(),
             () => new v2_0_0AlphaBeta(),
             () => new v1_0_0LookAhead(),
             () => new SebBot(), // The OG EvilBot
