@@ -27,8 +27,20 @@ namespace ChessChallenge.Application
 
                 void DrawStats(ChallengeController.BotMatchStats stats)
                 {
+                    float tournamentScore = stats.NumWins + ((float)stats.NumDraws / 2f);
+                    int totalPossibleScore = stats.NumWins + stats.NumDraws + stats.NumLosses;
+                    float winPercentage = 100f * tournamentScore / totalPossibleScore;
+
+                    Color statusCol = Color.YELLOW;
+                    if (winPercentage < 40) {
+                        statusCol = Color.RED;
+                    } else if (winPercentage > 60) {
+                        statusCol = Color.GREEN;
+                    }
+
                     DrawNextText(stats.BotName + ":", nameFontSize, Color.WHITE);
-                    DrawNextText($"Score: +{stats.NumWins} ={stats.NumDraws} -{stats.NumLosses}", regularFontSize, col);
+                    DrawNextText($"Tournament Score: {tournamentScore} / {totalPossibleScore} ({(int)winPercentage}%)", regularFontSize, statusCol);
+                    DrawNextText($"Score: W = {stats.NumWins} | D = {stats.NumDraws} | L = {stats.NumLosses}", regularFontSize, col);
                     DrawNextText($"Num Timeouts: {stats.NumTimeouts}", regularFontSize, col);
                     DrawNextText($"Num Illegal Moves: {stats.NumIllegalMoves}", regularFontSize, col);
                 }
