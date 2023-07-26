@@ -3,10 +3,10 @@ using System;
 using System.Linq;
 using System.Collections.Generic;
 
-public class MyBot : IChessBot
+public class v2_0_0AlphaBeta : IChessBot
 {
     // Adds alpha-beta pruning in search
-    public MyBot()
+    public v2_0_0AlphaBeta()
     {
         for (int i = 0; i < 12; i++)
         {
@@ -58,6 +58,8 @@ public class MyBot : IChessBot
 
         return decoded;
     }
+
+
 
     public Move Think(Board board, Timer timer)
     {

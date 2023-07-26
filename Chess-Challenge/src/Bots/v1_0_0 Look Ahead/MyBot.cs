@@ -3,8 +3,16 @@ using System;
 using System.Linq;
 using System.Collections.Generic;
 
-public class Gen1Lookahead : IChessBot
+public class v1_0_0LookAhead : IChessBot
 {
+    public v1_0_0LookAhead()
+    {
+        for (int i = 0; i < 12; i++)
+        {
+            bonuses[i] = decode(i);
+        }
+    }
+
     // Piece values: null, pawn, knight, bishop, rook, queen, king
     int[] pieceValues = { 0, 1, 3, 3, 5, 9, 10 };
     bool endgame = false;
@@ -38,14 +46,6 @@ public class Gen1Lookahead : IChessBot
         }
 
         return decoded;
-    }
-
-    public Gen1Lookahead()
-    {
-        for (int i = 0; i < 12; i++)
-        {
-            bonuses[i] = decode(i);
-        }
     }
 
     public Move Think(Board board, Timer timer)
