@@ -3,25 +3,13 @@ using System;
 using System.Linq;
 using System.Collections.Generic;
 
+// MyBot Gen 1.0.0
 
-struct Node
+public class MyBot1_0_0 : IChessBot
 {
-    public Move? move;
-    public int score;
-    public Node(Move? move, int score)
-    {
-        this.move = move;
-        this.score = score;
-    }
-}
-
-public class MyBot : IChessBot
-{
-    // MyBot Gen 2.0.0
-    // Adds alpha-beta pruning in search
-
     // Piece values: null, pawn, knight, bishop, rook, queen, king
     int[] pieceValues = { 0, 1, 3, 3, 5, 9, 10 };
+    bool endgame = false;
 
     // encoded bonus tables into 4 bits each. basically a hex digit a square
     ulong[] bonuses4BitEncoded = {
@@ -54,7 +42,7 @@ public class MyBot : IChessBot
         return decoded;
     }
 
-    public MyBot()
+    public MyBot1_0_0()
     {
         for (int i = 0; i < 12; i++)
         {
@@ -64,76 +52,64 @@ public class MyBot : IChessBot
 
     public Move Think(Board board, Timer timer)
     {
-        // TODO: Make depth some function of remaining time and game progression
-        Node bestMove = alphaBetaSearch(board, 4, int.MinValue, int.MaxValue, true);
-        return bestMove.move ?? board.GetLegalMoves()[0];
-    }
-
-    Node alphaBetaSearch(Board board, int depth, int alpha, int beta, bool maximizing)
-    {
         Move[] moves = board.GetLegalMoves();
-        if (depth == 0 || moves.Length == 0)
-            return new Node(null, scoreBoard(board));
 
-        Move bestMove = moves[0];
-        int value = maximizing ? int.MinValue : int.MaxValue;
-
-        if (maximizing)
+        Move? bestMove = null;
+        var bestScore = int.MinValue;
+        foreach (var move in moves)
         {
-            foreach (var m in moves)
+            var score = scoreMove(board, move);
+            if (score > bestScore)
             {
-                board.MakeMove(m);
-                value = Math.Max(value, alphaBetaSearch(board, depth - 1, alpha, beta, false).score);
-                board.UndoMove(m);
-                if (value > beta) break;
-                if (value > alpha)
-                {
-                    alpha = value;
-                    bestMove = m;
-                }
-            }
-        }
-        else
-        {
-            foreach (var m in moves)
-            {
-                board.MakeMove(m);
-                value = Math.Min(value, alphaBetaSearch(board, depth - 1, alpha, beta, true).score);
-                board.UndoMove(m);
-                if (value < alpha) break;
-                if (value < beta)
-                {
-                    beta = value;
-                    bestMove = m;
-                }
+                bestMove = move;
+                bestScore = score;
             }
         }
 
-        return new Node(bestMove, value);
+        System.Console.WriteLine($"best score: {bestScore}");
+
+        return bestMove ?? moves[0];
     }
 
-    // TODO: Add some memoisation to `scoreBoard`
-    int scoreBoard(Board board)
+    int scoreMove(Board board, Move move)
     {
-        if (board.IsInCheckmate()) return int.MaxValue;
+        board.MakeMove(move);
+
+        if (board.IsInCheckmate())
+        {
+            board.UndoMove(move);
+            return int.MaxValue;
+        }
 
         var pieceLists = board.GetAllPieceLists();
         int[] scores = { 0, 0 };
         int[] pieceCounts = { 0, 0 };
 
         foreach (var pieceList in pieceLists)
+        {
             foreach (var piece in pieceList)
             {
                 var colorIndex = piece.IsWhite ? 0 : 1;
-                scores[colorIndex] += 100 * pieceValues[(int)piece.PieceType] + 3 * rankPosition(piece, pieceCounts[0] <= 3 || pieceCounts[1] <= 3);
-                if (!piece.IsKing && !piece.IsPawn) pieceCounts[colorIndex]++;
+                scores[colorIndex] += 100 * pieceValues[(int)piece.PieceType] + 3 * rankPosition(piece);
+                if (!piece.IsKing && !piece.IsPawn)
+                {
+                    pieceCounts[colorIndex]++;
+                }
             }
+        }
+
+        board.UndoMove(move);
+
+        if (pieceCounts[0] <= 3 || pieceCounts[1] <= 3)
+        {
+            endgame = true;
+        }
 
         var moveIndex = board.IsWhiteToMove ? 0 : 1;
         return scores[moveIndex] - scores[1 - moveIndex];
     }
 
-    int rankPosition(Piece p, bool endgame)
+    int rankPosition(Piece p)
     {
         var endGameIndex = endgame ? 6 : 0;
         return bonuses[endGameIndex + (int)p.PieceType - 1][p.Square.Index];
