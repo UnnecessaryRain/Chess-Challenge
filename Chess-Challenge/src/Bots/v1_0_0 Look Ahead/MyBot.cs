@@ -3,10 +3,16 @@ using System;
 using System.Linq;
 using System.Collections.Generic;
 
-// MyBot Gen 1.0.0
-
-public class MyBot1_0_0 : IChessBot
+public class v1_0_0LookAhead : IChessBot
 {
+    public v1_0_0LookAhead()
+    {
+        for (int i = 0; i < 12; i++)
+        {
+            bonuses[i] = decode(i);
+        }
+    }
+
     // Piece values: null, pawn, knight, bishop, rook, queen, king
     int[] pieceValues = { 0, 1, 3, 3, 5, 9, 10 };
     bool endgame = false;
@@ -42,14 +48,6 @@ public class MyBot1_0_0 : IChessBot
         return decoded;
     }
 
-    public MyBot1_0_0()
-    {
-        for (int i = 0; i < 12; i++)
-        {
-            bonuses[i] = decode(i);
-        }
-    }
-
     public Move Think(Board board, Timer timer)
     {
         Move[] moves = board.GetLegalMoves();
@@ -65,8 +63,6 @@ public class MyBot1_0_0 : IChessBot
                 bestScore = score;
             }
         }
-
-        System.Console.WriteLine($"best score: {bestScore}");
 
         return bestMove ?? moves[0];
     }
