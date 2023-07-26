@@ -19,13 +19,13 @@ namespace ChessChallenge.API
 		bool hasCachedMoves;
 		Move[] cachedLegalCaptureMoves;
 		bool hasCachedCaptureMoves;
-        readonly Move[] movesDest;
+		readonly Move[] movesDest;
 
-        /// <summary>
-        /// Create a new board. Note: this should not be used in the challenge,
-        /// use the board provided in the Think method instead.
-        /// </summary>
-        public Board(Chess.Board board)
+		/// <summary>
+		/// Create a new board. Note: this should not be used in the challenge,
+		/// use the board provided in the Think method instead.
+		/// </summary>
+		public Board(Chess.Board board)
 		{
 			this.board = board;
 			moveGen = new APIMoveGen();
@@ -54,7 +54,7 @@ namespace ChessChallenge.API
 
 			// Init game moves history
 			GameMoveHistory = board.AllGameMoves.Select(m => new Move(MoveUtility.GetMoveNameUCI(m), this)).ToArray();
-        }
+		}
 
 		/// <summary>
 		/// Updates the board state with the given move.
@@ -126,22 +126,22 @@ namespace ChessChallenge.API
 
 			if (!hasCachedMoves)
 			{
-                Span<Move> moveSpan = movesDest.AsSpan();
-                moveGen.GenerateMoves(ref moveSpan, board, includeQuietMoves: true);
-                cachedLegalMoves = moveSpan.ToArray();
-                hasCachedMoves = true;
+				Span<Move> moveSpan = movesDest.AsSpan();
+				moveGen.GenerateMoves(ref moveSpan, board, includeQuietMoves: true);
+				cachedLegalMoves = moveSpan.ToArray();
+				hasCachedMoves = true;
 			}
 
 			return cachedLegalMoves;
 		}
 
-        /// <summary>
-        /// Fills the given move span with legal moves, and slices it to the correct length.
-        /// Can choose to get only capture moves with the optional 'capturesOnly' parameter.
+		/// <summary>
+		/// Fills the given move span with legal moves, and slices it to the correct length.
+		/// Can choose to get only capture moves with the optional 'capturesOnly' parameter.
 		/// This gives the same result as the GetLegalMoves function, but allows you to be more
 		/// efficient with memory by allocating moves on the stack rather than the heap.
-        /// </summary>
-        public void GetLegalMovesNonAlloc(ref Span<Move> moveList, bool capturesOnly = false)
+		/// </summary>
+		public void GetLegalMovesNonAlloc(ref Span<Move> moveList, bool capturesOnly = false)
 		{
 			bool includeQuietMoves = !capturesOnly;
 			moveGen.GenerateMoves(ref moveList, board, includeQuietMoves);
@@ -152,10 +152,10 @@ namespace ChessChallenge.API
 		{
 			if (!hasCachedCaptureMoves)
 			{
-                Span<Move> moveSpan = movesDest.AsSpan();
-                moveGen.GenerateMoves(ref moveSpan, board, includeQuietMoves: false);
-                cachedLegalCaptureMoves = moveSpan.ToArray();
-                hasCachedCaptureMoves = true;
+				Span<Move> moveSpan = movesDest.AsSpan();
+				moveGen.GenerateMoves(ref moveSpan, board, includeQuietMoves: false);
+				cachedLegalCaptureMoves = moveSpan.ToArray();
+				hasCachedCaptureMoves = true;
 			}
 			return cachedLegalCaptureMoves;
 		}
@@ -170,12 +170,12 @@ namespace ChessChallenge.API
 		/// </summary>
 		public bool IsInCheckmate() => IsInCheck() && GetLegalMoves().Length == 0;
 
-        /// <summary>
-        /// Test if the current position is a draw due stalemate, repetition, insufficient material, or 50-move rule.
-        /// Note: this function will return true if the same position has occurred twice on the board (rather than 3 times,
-        /// which is when the game is actually drawn). This quirk is to help bots avoid repeating positions unnecessarily.
-        /// </summary>
-        public bool IsDraw()
+		/// <summary>
+		/// Test if the current position is a draw due stalemate, repetition, insufficient material, or 50-move rule.
+		/// Note: this function will return true if the same position has occurred twice on the board (rather than 3 times,
+		/// which is when the game is actually drawn). This quirk is to help bots avoid repeating positions unnecessarily.
+		/// </summary>
+		public bool IsDraw()
 		{
 			return IsFiftyMoveDraw() || IsInsufficientMaterial() || IsInStalemate() || IsRepeatedPosition();
 
@@ -196,12 +196,12 @@ namespace ChessChallenge.API
 		/// </summary>
 		public bool IsInsufficientMaterial() => Arbiter.InsufficentMaterial(board);
 
-        /// <summary>
-        /// Does the given player still have the right to castle kingside?
-        /// Note that having the right to castle doesn't necessarily mean castling is legal right now
-        /// (for example, a piece might be in the way, or player might be in check, etc).
-        /// </summary>
-        public bool HasKingsideCastleRight(bool white) => board.currentGameState.HasKingsideCastleRight(white);
+		/// <summary>
+		/// Does the given player still have the right to castle kingside?
+		/// Note that having the right to castle doesn't necessarily mean castling is legal right now
+		/// (for example, a piece might be in the way, or player might be in check, etc).
+		/// </summary>
+		public bool HasKingsideCastleRight(bool white) => board.currentGameState.HasKingsideCastleRight(white);
 
 		/// <summary>
 		/// Does the given player still have the right to castle queenside?
@@ -219,20 +219,20 @@ namespace ChessChallenge.API
 			return new Square(board.KingSquare[colIndex]);
 		}
 
-        /// <summary>
-        /// Gets the piece on the given square. If the square is empty, the piece will have a PieceType of None.
-        /// </summary>
-        public Piece GetPiece(Square square)
-        {
-            int p = board.Square[square.Index];
-            bool white = PieceHelper.IsWhite(p);
-            return new Piece((PieceType)PieceHelper.PieceType(p), white, square);
-        }
+		/// <summary>
+		/// Gets the piece on the given square. If the square is empty, the piece will have a PieceType of None.
+		/// </summary>
+		public Piece GetPiece(Square square)
+		{
+			int p = board.Square[square.Index];
+			bool white = PieceHelper.IsWhite(p);
+			return new Piece((PieceType)PieceHelper.PieceType(p), white, square);
+		}
 
-        /// <summary>
-        /// Gets a list of pieces of the given type and colour
-        /// </summary>
-        public PieceList GetPieceList(PieceType pieceType, bool white)
+		/// <summary>
+		/// Gets a list of pieces of the given type and colour
+		/// </summary>
+		public PieceList GetPieceList(PieceType pieceType, bool white)
 		{
 			return allPieceLists[PieceHelper.MakePiece((int)pieceType, white)];
 		}
@@ -245,7 +245,7 @@ namespace ChessChallenge.API
 		{
 			return validPieceLists;
 		}
-		
+
 		/// <summary>
 		/// Is the given square attacked by the opponent?
 		/// (opponent being whichever player doesn't currently have the right to move)
@@ -265,11 +265,11 @@ namespace ChessChallenge.API
 		/// </summary>
 		public string GetFenString() => FenUtility.CurrentFen(board);
 
-        /// <summary>
-        /// 64-bit number where each bit that is set to 1 represents a
-        /// square that contains a piece of the given type and colour.
-        /// </summary>
-        public ulong GetPieceBitboard(PieceType pieceType, bool white)
+		/// <summary>
+		/// 64-bit number where each bit that is set to 1 represents a
+		/// square that contains a piece of the given type and colour.
+		/// </summary>
+		public ulong GetPieceBitboard(PieceType pieceType, bool white)
 		{
 			return board.pieceBitboards[PieceHelper.MakePiece((int)pieceType, white)];
 		}
@@ -296,11 +296,11 @@ namespace ChessChallenge.API
 		/// </summary>
 		public int PlyCount => board.plyCount;
 
-        /// <summary>
-        ///  Number of ply (a single move by either white or black) since the last pawn move or capture.
+		/// <summary>
+		///  Number of ply (a single move by either white or black) since the last pawn move or capture.
 		///  If this value reaches a hundred (meaning 50 full moves without a pawn move or capture), the game is drawn.
-        /// </summary>
-        public int FiftyMoveCounter => board.currentGameState.fiftyMoveCounter;
+		/// </summary>
+		public int FiftyMoveCounter => board.currentGameState.fiftyMoveCounter;
 
 		/// <summary>
 		/// 64-bit hash of the current position
@@ -315,10 +315,10 @@ namespace ChessChallenge.API
 		/// </summary>
 		public ulong[] GameRepetitionHistory { get; private set; }
 
-        /// <summary>
-        /// FEN representation of the game's starting position.
-        /// </summary>
-        public string GameStartFenString => board.GameStartFen;
+		/// <summary>
+		/// FEN representation of the game's starting position.
+		/// </summary>
+		public string GameStartFenString => board.GameStartFen;
 
 		/// <summary>
 		/// All the moves played in the game so far.
@@ -326,16 +326,16 @@ namespace ChessChallenge.API
 		/// </summary>
 		public Move[] GameMoveHistory { get; private set; }
 
-        /// <summary>
-        /// Creates a board from the given fen string. Please note that this is quite slow, and so it is advised
-        /// to use the board given in the Think function, and update it using MakeMove and UndoMove instead.
-        /// </summary>
-        public static Board CreateBoardFromFEN(string fen)
-        {
-            Chess.Board boardCore = new Chess.Board();
-            boardCore.LoadPosition(fen);
-            return new Board(boardCore);
-        }
+		/// <summary>
+		/// Creates a board from the given fen string. Please note that this is quite slow, and so it is advised
+		/// to use the board given in the Think function, and update it using MakeMove and UndoMove instead.
+		/// </summary>
+		public static Board CreateBoardFromFEN(string fen)
+		{
+			Chess.Board boardCore = new Chess.Board();
+			boardCore.LoadPosition(fen);
+			return new Board(boardCore);
+		}
 
-    }
+	}
 }
