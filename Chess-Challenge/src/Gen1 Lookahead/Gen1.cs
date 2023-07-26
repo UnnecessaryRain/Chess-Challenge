@@ -3,9 +3,7 @@ using System;
 using System.Linq;
 using System.Collections.Generic;
 
-// MyBot Gen 1.0.0
-
-public class MyBot1_0_0 : IChessBot
+public class Gen1Lookahead : IChessBot
 {
     // Piece values: null, pawn, knight, bishop, rook, queen, king
     int[] pieceValues = { 0, 1, 3, 3, 5, 9, 10 };
@@ -42,7 +40,7 @@ public class MyBot1_0_0 : IChessBot
         return decoded;
     }
 
-    public MyBot1_0_0()
+    public Gen1Lookahead()
     {
         for (int i = 0; i < 12; i++)
         {
@@ -65,8 +63,6 @@ public class MyBot1_0_0 : IChessBot
                 bestScore = score;
             }
         }
-
-        System.Console.WriteLine($"best score: {bestScore}");
 
         return bestMove ?? moves[0];
     }
