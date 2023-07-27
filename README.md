@@ -13,6 +13,7 @@ I unfortunately missed a serious bug in the API and have had to update the proje
 * <b>V1.13</b> Fixed issue with `board.ZobristKey` where value would sometimes be different after making and undoing a move. Added an alternative function for getting moves `board.GetLegalMovesNonAlloc()` (see docs for more info).
 * <b>V1.14</b> A handful of additions to the Board API: `board.IsInsufficientMaterial()`, `board.IsRepeatedPosition()`, `board.GameRepetitionHistory`, `board.FiftyMoveCounter`, `board.GameMoveHistory`, `board.GameStartFenString`.
 * <b>V1.15</b> Fixed incorrect `move.CapturePieceType` for en-passant moves and moves in `board.GameMoveHistory`. Added `BitboardHelper.VisualizeBitboard()` to help with debugging bitboards.
+* <b>V1.16</b> Added `timer.GameStartTimeMilliseconds`, `timer.OpponentMillisecondsRemaining`, and `board.ForceSkipTurn()`.
 
 ## Submission Due Date
 October 1st 2023.<br>
@@ -65,6 +66,8 @@ There is a size limit on the code you create called the _bot brain capacity_. Th
 All names (variables, functions, etc.) are counted as a single token, regardless of length. This means that both lines of code: `bool a = true;` and `bool myObscenelyLongVariableName = true;` count the same. Additionally, the following things do not count towards the limit: white space, new lines, comments, access modifiers, commas, and semicolons.
 
 ## FAQ and Troubleshooting
+* Will the final tournament games be played from the standard starting position, or from custom positions?
+  * Games will be played from the standard starting position. If tiebreak games are required, custom positions will be used.
 * [Unable to build/run the project from my IDE/Code editor](https://github.com/SebLague/Chess-Challenge/issues/85)
   * After downloading the project and installing .Net 6.0, open a terminal / command prompt window.
   * Navigate to the folder where Chess-Challenge.csproj is located using the `cd` command.
