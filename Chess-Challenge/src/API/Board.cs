@@ -432,11 +432,11 @@ namespace ChessChallenge.API
 
 		public override string ToString() => CreateDiagram();
 
-        /// <summary>
-        /// Creates a board from the given fen string. Please note that this is quite slow, and so it is advised
-        /// to use the board given in the Think function, and update it using MakeMove and UndoMove instead.
-        /// </summary>
-        public static Board CreateBoardFromFEN(string fen)
+		/// <summary>
+		/// Creates a board from the given fen string. Please note that this is quite slow, and so it is advised
+		/// to use the board given in the Think function, and update it using MakeMove and UndoMove instead.
+		/// </summary>
+		public static Board CreateBoardFromFEN(string fen)
         {
             Chess.Board boardCore = new Chess.Board();
             boardCore.LoadPosition(fen);
