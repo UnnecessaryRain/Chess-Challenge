@@ -5,21 +5,23 @@ namespace ChessChallenge.API
 	using System;
 	using System.Collections.Generic;
 	using System.Linq;
+	using System.Text;
 
 	public sealed class Board
 	{
 		readonly Chess.Board board;
 		readonly APIMoveGen moveGen;
+		readonly RepetitionTable repetitionTable;
 
-		readonly HashSet<ulong> repetitionHistory;
 		readonly PieceList[] allPieceLists;
 		readonly PieceList[] validPieceLists;
 
+        readonly Move[] movesDest;
 		Move[] cachedLegalMoves;
 		bool hasCachedMoves;
 		Move[] cachedLegalCaptureMoves;
 		bool hasCachedCaptureMoves;
-		readonly Move[] movesDest;
+        readonly Move[] movesDest;
 
         /// <summary>
         /// Create a new board. Note: this should not be used in the challenge,
@@ -31,6 +33,7 @@ namespace ChessChallenge.API
 			board = new Chess.Board();
 			board.LoadPosition(boardSource.StartPositionInfo);
 			GameMoveHistory = new Move[boardSource.AllGameMoves.Count];
+			repetitionTable = new();
 
 			for (int i = 0; i < boardSource.AllGameMoves.Count; i ++)
 			{
@@ -61,9 +64,8 @@ namespace ChessChallenge.API
 			this.validPieceLists = validPieceLists.ToArray();
 
 			// Init rep history
-			repetitionHistory = new HashSet<ulong>(board.RepetitionPositionHistory);
-			GameRepetitionHistory = repetitionHistory.ToArray();
-			repetitionHistory.Remove(board.ZobristKey);
+			GameRepetitionHistory = board.RepetitionPositionHistory.ToArray();
+			repetitionTable.Init(board);
         }
 
 		/// <summary>
@@ -73,13 +75,14 @@ namespace ChessChallenge.API
 		/// </summary>
 		public void MakeMove(Move move)
 		{
-			hasCachedMoves = false;
-			hasCachedCaptureMoves = false;
 			if (!move.IsNull)
 			{
-				repetitionHistory.Add(board.ZobristKey);
+				OnPositionChanged();
 				board.MakeMove(new Chess.Move(move.RawValue), inSearch: true);
-			}
+				repetitionTable.Push(ZobristKey, move.IsCapture || move.MovePieceType == PieceType.Pawn);
+                depth++;
+
+            }
 		}
 
 		/// <summary>
@@ -87,12 +90,12 @@ namespace ChessChallenge.API
 		/// </summary>
 		public void UndoMove(Move move)
 		{
-			hasCachedMoves = false;
-			hasCachedCaptureMoves = false;
 			if (!move.IsNull)
 			{
+				repetitionTable.TryPop();
 				board.UndoMove(new Chess.Move(move.RawValue), inSearch: true);
-				repetitionHistory.Remove(board.ZobristKey);
+                OnPositionChanged();
+				depth--;
 			}
 		}
 
@@ -108,10 +111,9 @@ namespace ChessChallenge.API
 			{
 				return false;
 			}
-			hasCachedMoves = false;
-			hasCachedCaptureMoves = false;
 			board.MakeNullMove();
-			return true;
+            OnPositionChanged();
+            return true;
 		}
 
         /// <summary>
@@ -124,9 +126,8 @@ namespace ChessChallenge.API
         /// </summary>
         public void ForceSkipTurn()
         {
-            hasCachedMoves = false;
-            hasCachedCaptureMoves = false;
             board.MakeNullMove();
+            OnPositionChanged();
         }
 
         /// <summary>
@@ -134,10 +135,9 @@ namespace ChessChallenge.API
         /// </summary>
         public void UndoSkipTurn()
 		{
-			hasCachedMoves = false;
-			hasCachedCaptureMoves = false;
 			board.UnmakeNullMove();
-		}
+            OnPositionChanged();
+        }
 
 		/// <summary>
 		/// Gets an array of the legal moves in the current position.
@@ -152,10 +152,10 @@ namespace ChessChallenge.API
 
 			if (!hasCachedMoves)
 			{
-				Span<Move> moveSpan = movesDest.AsSpan();
-				moveGen.GenerateMoves(ref moveSpan, board, includeQuietMoves: true);
-				cachedLegalMoves = moveSpan.ToArray();
-				hasCachedMoves = true;
+                Span<Move> moveSpan = movesDest.AsSpan();
+                moveGen.GenerateMoves(ref moveSpan, board, includeQuietMoves: true);
+                cachedLegalMoves = moveSpan.ToArray();
+                hasCachedMoves = true;
 			}
 
 			return cachedLegalMoves;
@@ -171,7 +171,13 @@ namespace ChessChallenge.API
 		{
 			bool includeQuietMoves = !capturesOnly;
 			moveGen.GenerateMoves(ref moveList, board, includeQuietMoves);
-		}
+
+			if (!capturesOnly)
+			{
+				hasCachedMoveCount = true;
+				cachedMoveCount = moveList.Length;
+			}
+        }
 
 
 		Move[] GetLegalCaptureMoves()
@@ -189,12 +195,12 @@ namespace ChessChallenge.API
 		/// <summary>
 		/// Test if the player to move is in check in the current position.
 		/// </summary>
-		public bool IsInCheck() => board.IsInCheck();
+		public bool IsInCheck() => moveGen.IsInitialized ? moveGen.InCheck() : board.IsInCheck();
 
 		/// <summary>
 		/// Test if the current position is checkmate
 		/// </summary>
-		public bool IsInCheckmate() => IsInCheck() && GetLegalMoves().Length == 0;
+		public bool IsInCheckmate() => IsInCheck() && HasZeroLegalMoves();
 
 		/// <summary>
 		/// Test if the current position is a draw due stalemate, repetition, insufficient material, or 50-move rule.
@@ -204,17 +210,24 @@ namespace ChessChallenge.API
 		public bool IsDraw()
 		{
 			return IsFiftyMoveDraw() || IsInsufficientMaterial() || IsInStalemate() || IsRepeatedPosition();
-
-			bool IsInStalemate() => !IsInCheck() && GetLegalMoves().Length == 0;
-			bool IsFiftyMoveDraw() => board.currentGameState.fiftyMoveCounter >= 100;
 		}
 
-		/// <summary>
-		/// Test if the current position has occurred at least once before on the board.
-		/// This includes both positions in the actual game, and positions reached by
-		/// making moves while the bot is thinking.
-		/// </summary>
-		public bool IsRepeatedPosition() => repetitionHistory.Contains(board.ZobristKey);
+        /// <summary>
+        /// Test if the current position is a draw due to stalemate
+        /// </summary>
+        public bool IsInStalemate() => !IsInCheck() && HasZeroLegalMoves();
+
+        /// <summary>
+        /// Test if the current position is a draw due to the fifty move rule
+        /// </summary>
+        public bool IsFiftyMoveDraw() => board.currentGameState.fiftyMoveCounter >= 100;
+
+        /// <summary>
+        /// Test if the current position has occurred at least once before on the board.
+        /// This includes both positions in the actual game, and positions reached by
+        /// making moves while the bot is thinking.
+        /// </summary>
+        public bool IsRepeatedPosition() => depth > 0 && repetitionTable.Contains(board.ZobristKey);
 
 		/// <summary>
 		/// Test if there are sufficient pieces remaining on the board to potentially deliver checkmate.
@@ -278,11 +291,7 @@ namespace ChessChallenge.API
 		/// </summary>
 		public bool SquareIsAttackedByOpponent(Square square)
 		{
-			if (!hasCachedMoves)
-			{
-				GetLegalMoves();
-			}
-			return BitboardHelper.SquareIsSet(moveGen.opponentAttackMap, square);
+			return BitboardHelper.SquareIsSet(moveGen.GetOpponentAttackMap(board), square);
 		}
 
 
@@ -352,16 +361,87 @@ namespace ChessChallenge.API
 		/// </summary>
 		public Move[] GameMoveHistory { get; private set; }
 
-		/// <summary>
-		/// Creates a board from the given fen string. Please note that this is quite slow, and so it is advised
-		/// to use the board given in the Think function, and update it using MakeMove and UndoMove instead.
-		/// </summary>
-		public static Board CreateBoardFromFEN(string fen)
-		{
-			Chess.Board boardCore = new Chess.Board();
-			boardCore.LoadPosition(fen);
-			return new Board(boardCore);
-		}
+        /// <summary>
+        /// Creates an ASCII-diagram of the current position.
+        /// The capital letters are the white pieces, while the lowercase letters are the black ones.
+        /// NOTE: To distinguish kings from knights, kings are represented by K/k and knights by N/n.
+        /// </summary>
+        public string CreateDiagram(bool blackAtTop = true, bool includeFen = true, bool includeZobristKey = true, Square? highlightedSquare = null)
+        {
+            StringBuilder result = new();
 
-	}
+            for (int y = 0; y < 8; y++)
+            {
+                int rankIndex = blackAtTop ? 7 - y : y;
+                result.AppendLine("+---+---+---+---+---+---+---+---+");
+
+                for (int x = 0; x < 8; x++)
+                {
+                    int fileIndex = blackAtTop ? x : 7 - x;
+                    Square square = new Square(fileIndex, rankIndex);
+                    Piece pieceInSquare = GetPiece(square);
+                    if (square != highlightedSquare)
+                    {
+                        result.Append($"| {GetPieceSymbol(pieceInSquare)} ");
+                    }
+                    else
+                    {
+                        // To highlight this square, we add brackets around its piece
+                        result.Append($"|({GetPieceSymbol(pieceInSquare)})");
+                    }
+
+                    if (x == 7)
+                    {
+                        // Show rank number on the right side
+                        result.AppendLine($"| {rankIndex + 1}");
+                    }
+                }
+
+                if (y == 7)
+                {
+                    // Show files at the bottom
+                    result.AppendLine("+---+---+---+---+---+---+---+---+");
+                    const string fileNames = "  a   b   c   d   e   f   g   h  ";
+                    const string fileNamesRev = "  h   g   f   e   d   c   b   a  ";
+                    result.AppendLine(blackAtTop ? fileNames : fileNamesRev);
+                    result.AppendLine();
+
+                    if (includeFen)
+                    {
+                        result.AppendLine($"Fen         : {FenUtility.CurrentFen(board)}");
+                    }
+                    if (includeZobristKey)
+                    {
+                        result.AppendLine($"Zobrist Key : {board.ZobristKey}");
+                    }
+                }
+            }
+
+            return result.ToString();
+
+            static char GetPieceSymbol(Piece piece)
+            {
+                if (piece.IsNull)
+                {
+                    return ' ';
+                }
+                char pieceSymbol = piece.IsKnight ? 'N' : piece.PieceType.ToString()[0];
+                return piece.IsWhite ? char.ToUpper(pieceSymbol) : char.ToLower(pieceSymbol);
+            }
+        }
+
+		public override string ToString() => CreateDiagram();
+
+        /// <summary>
+        /// Creates a board from the given fen string. Please note that this is quite slow, and so it is advised
+        /// to use the board given in the Think function, and update it using MakeMove and UndoMove instead.
+        /// </summary>
+        public static Board CreateBoardFromFEN(string fen)
+        {
+            Chess.Board boardCore = new Chess.Board();
+            boardCore.LoadPosition(fen);
+            return new Board(boardCore);
+        }
+
+    }
 }
